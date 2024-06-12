@@ -1,6 +1,7 @@
 package org.jetlinks.zlmedia.runner.process;
 
 import lombok.SneakyThrows;
+import org.jetlinks.zlmedia.runner.ZLMediaConfigs;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
@@ -24,7 +25,12 @@ class EmbeddedProcessMediaRuntimeTest {
     @Test
     @SneakyThrows
     void testStart() {
-        EmbeddedProcessMediaRuntime runtime = new EmbeddedProcessMediaRuntime("target/zlmedia");
+        ZLMediaConfigs configs= new ZLMediaConfigs();
+        configs.getPorts().setRtsp(11554);
+        configs.getPorts().setRtmp(11935);
+        configs.getPorts().setSrt(19000);
+
+        EmbeddedProcessMediaRuntime runtime = new EmbeddedProcessMediaRuntime("target/zlmedia",configs);
 
         try {
             runtime.start()
