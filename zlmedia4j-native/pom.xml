@@ -84,6 +84,47 @@
             </properties>
         </profile>
 
+        <profile>
+            <id>linux-x86_64</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                    <arch>x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <zlmedia.os>linux</zlmedia.os>
+                <zlmedia.arch>x86_64</zlmedia.arch>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>linux-aarch_64</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                    <arch>aarch_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <zlmedia.os>linux</zlmedia.os>
+                <zlmedia.arch>aarch_64</zlmedia.arch>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>windows-x86_64</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                    <arch>x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <zlmedia.os>windows</zlmedia.os>
+                <zlmedia.arch>x86_64</zlmedia.arch>
+            </properties>
+        </profile>
     </profiles>
 
     <dependencies>
