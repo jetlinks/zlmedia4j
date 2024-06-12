@@ -52,7 +52,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     private final ZLMediaConfigs mediaConfigs;
 
     //api访问密钥
-    private String secret = "zlmedia4jStartup";
+    private final String secret = UUID.randomUUID().toString().replace("-", "");
 
     public ProcessZLMediaRuntime(String processFile) {
         this(processFile, new ZLMediaConfigs());
@@ -83,6 +83,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         this.processFile = processFile;
         this.mediaConfigs = configs;
         this.configs.putAll(configs.createConfigs());
+        this.configs.put("api.secret",secret);
         this.operations = new RestfulZLMediaOperations(
             builder
                 .clone()
@@ -108,20 +109,9 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             .fromRunnable(this::start0)
             .subscribeOn(Schedulers.boundedElastic())
             //等待
-            .then(startAwait.asMono())
-            //保存配置
-            .then(saveConfigs());
+            .then(startAwait.asMono());
     }
 
-    private Mono<Void> saveConfigs() {
-        String newSecret = UUID.randomUUID().toString().replace("-", "");
-        configs.put("api.secret", newSecret);
-        return operations
-            .opsForState()
-            .setConfigs(configs)
-            .doOnNext(ignore -> secret = ignore.getOrDefault("api.secret", newSecret))
-            .then();
-    }
 
     protected long getPid() {
         try {
@@ -160,7 +150,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             .command(file.getAbsolutePath())
             .directory(file.getParentFile())
             .redirectErrorStream(true)
-            //.inheritIO()
+            .inheritIO()
             .start();
         long pid = getPid();
 
