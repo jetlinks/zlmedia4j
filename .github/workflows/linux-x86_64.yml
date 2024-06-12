@@ -19,4 +19,4 @@ jobs:
         path: ~/.m2
         key: zlmedia4j-maven-repository
     - name: Build with Maven
-      run: ./mvnw clean test
+      run: ./mvnw clean test -Plinux-x86_64

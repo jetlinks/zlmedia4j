@@ -71,6 +71,9 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         continue;
                     }
                     String filename = entry.getName();
+                    if(filename.startsWith(" __MACOSX")||filename.endsWith(".DS_Store")){
+                        continue;
+                    }
                     if (filename.endsWith("/")) {
                         continue;
                     }
