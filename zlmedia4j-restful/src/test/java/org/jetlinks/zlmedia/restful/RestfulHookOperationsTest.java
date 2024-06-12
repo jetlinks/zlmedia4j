@@ -7,13 +7,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.time.Duration;
 
 class RestfulHookOperationsTest {
 
     @Test
     void testParams() {
-        doTest(Play.class, "on_play", "{\"params\":\"name=test\"}")
+        doTest(Play.class, "test/on_play", "{\"params\":\"name=test\"}")
             .mapNotNull(Play::getParams)
             .mapNotNull(params -> params.getFirst("name"))
             .as(StepVerifier::create)
@@ -51,7 +51,9 @@ class RestfulHookOperationsTest {
 
     protected <E extends HookEvent<R>, R extends HookResponse>
     Mono<E> doTest(Class<E> clazz, String type, String payload) {
-        RestfulHookOperations operations = new RestfulHookOperations(new ObjectMapper());
+        RestfulHookOperationsImpl operations = new RestfulHookOperationsImpl(
+            RestfulZLMediaOperations.createObjectMapper(new ObjectMapper())
+        );
         Sinks.One<E> sink = Sinks.one();
 
         operations.on(clazz, report -> {
@@ -60,6 +62,7 @@ class RestfulHookOperationsTest {
         });
         return operations
             .fireEvent(type, payload)
-            .then(sink.asMono());
+            .then(sink.asMono())
+            .timeout(Duration.ofSeconds(1));
     }
 }

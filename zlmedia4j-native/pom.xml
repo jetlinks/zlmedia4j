@@ -15,11 +15,100 @@
 
     <description>
         Java Embedded ZLMedia Server.
-        Supports: windows,linux-x86_64,linux-aarch_64,macos-x86_64, macos-aarch-64.
+        Supports: windows-x86_64,linux-x86_64,linux-aarch_64,osx-x86_64, osx-aarch_64.
     </description>
 
     <properties>
+        <zlmedia.os>${os.detected.name}</zlmedia.os>
+        <zlmedia.arch>${os.detected.arch}</zlmedia.arch>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/lib/${zlmedia.os}</directory>
+                <includes>
+                    <include>${zlmedia.arch}.zip</include>
+                </includes>
+                <targetPath>zlmedia-native/${zlmedia.os}</targetPath>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <goals>
+                    <goal>jar</goal>
+                </goals>
+                <configuration>
+                    <classifier>${zlmedia.os}-${os.detected.arch}</classifier>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>osx-x86_64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <zlmedia.os>osx</zlmedia.os>
+                <zlmedia.arch>x86_64</zlmedia.arch>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>osx-aarch_64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>aarch_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <zlmedia.os>osx</zlmedia.os>
+                <zlmedia.arch>aarch_64</zlmedia.arch>
+            </properties>
+        </profile>
+
+    </profiles>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.jetlinks</groupId>
+            <artifactId>zlmedia4j-restful</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.26.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty</artifactId>
+        </dependency>
+    </dependencies>
 </project>
