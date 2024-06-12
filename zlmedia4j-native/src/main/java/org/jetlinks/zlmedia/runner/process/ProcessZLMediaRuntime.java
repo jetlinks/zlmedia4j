@@ -3,6 +3,8 @@ package org.jetlinks.zlmedia.runner.process;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.configuration2.INIConfiguration;
+import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.jetlinks.zlmedia.ZLMediaOperations;
 import org.jetlinks.zlmedia.restful.RestfulZLMediaOperations;
 import org.jetlinks.zlmedia.runner.ZLMediaConfigs;
@@ -61,6 +63,17 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
              WebClient.builder(),
              new ObjectMapper(),
              configs);
+    }
+
+    @SneakyThrows
+    private static void storeInit(Map<String,String> conf, File path){
+        Configurations configs = new Configurations();
+        INIConfiguration ini = configs.ini(path);
+        conf.forEach(ini::setProperty);
+        FileWriter fileWriter = new FileWriter(path);
+        ini.write(fileWriter);
+        fileWriter.close();
+        ini.clear();
     }
 
     public ProcessZLMediaRuntime(String processFile,
@@ -126,6 +139,8 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     @SneakyThrows
     protected void start0() {
         File file = new File(processFile);
+
+        storeInit(this.configs,new File(new File(processFile).getParent(),"config.ini"));
 
         Path pidFile = Paths.get(processFile + ".pid");
         if (pidFile.toFile().exists()) {
