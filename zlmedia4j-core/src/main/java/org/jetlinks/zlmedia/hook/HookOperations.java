@@ -5,9 +5,26 @@ import reactor.core.publisher.Mono;
 
 import java.util.function.Function;
 
+/**
+ * Hook相关操作接口
+ *
+ * @author zhouhao
+ * @see HookOperations#on(Class, HookListener)
+ * @see HookOperations#onFlowReport(HookListener)
+ * @see HookOperations#onPlay(HookListener)
+ * @since 1.0
+ */
 public interface HookOperations {
 
-
+    /**
+     * 注册一个Hook事件监听器
+     *
+     * @param type    事件类型
+     * @param handler 事件处理器
+     * @param <E>     事件类型
+     * @param <R>     响应类型
+     * @return Disposable
+     */
     <E extends HookEvent<R>, R extends HookResponse> Disposable on(Class<E> type, HookListener<E, R> handler);
 
 

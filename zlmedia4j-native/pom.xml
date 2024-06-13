@@ -21,7 +21,6 @@
     <properties>
         <zlmedia.os>${os.detected.name}</zlmedia.os>
         <zlmedia.arch>${os.detected.arch}</zlmedia.arch>
-
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -49,13 +48,36 @@
                     <goal>jar</goal>
                 </goals>
                 <configuration>
-                    <classifier>${zlmedia.os}-${os.detected.arch}</classifier>
+                    <classifier>${package.classifier}</classifier>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
     <profiles>
+        <profile>
+            <id>build-native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <!-- 构建native时,忽略class -->
+                        <configuration>
+                            <classifier>${package.classifier}</classifier>
+                            <excludes>
+                                <exclude>**/*.class</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <profile>
             <id>osx-x86_64</id>
             <activation>
@@ -67,6 +89,7 @@
             <properties>
                 <zlmedia.os>osx</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>
+                <package.classifier>osx-x86_64</package.classifier>
             </properties>
         </profile>
 
@@ -81,6 +104,7 @@
             <properties>
                 <zlmedia.os>osx</zlmedia.os>
                 <zlmedia.arch>aarch_64</zlmedia.arch>
+                <package.classifier>osx-aarch_64</package.classifier>
             </properties>
         </profile>
 
@@ -95,6 +119,7 @@
             <properties>
                 <zlmedia.os>linux</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>
+                <package.classifier>linux-x86_64</package.classifier>
             </properties>
         </profile>
 
@@ -109,6 +134,7 @@
             <properties>
                 <zlmedia.os>linux</zlmedia.os>
                 <zlmedia.arch>aarch_64</zlmedia.arch>
+                <package.classifier>linux-aarch_64</package.classifier>
             </properties>
         </profile>
 
@@ -123,6 +149,7 @@
             <properties>
                 <zlmedia.os>windows</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>
+                <package.classifier>windows-x86_64</package.classifier>
             </properties>
         </profile>
     </profiles>

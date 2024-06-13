@@ -12,10 +12,14 @@ public class RestfulResponse<T> {
     private T data;
     private Integer result;
 
+    public T getDataOrElse(T orElse) {
+        return data == null ? orElse : data;
+    }
 
-    public void assertSuccess() {
+    public RestfulResponse<T> assertSuccess() {
         if (code != 0) {
             throw new ZLMediaException(msg);
         }
+        return this;
     }
 }

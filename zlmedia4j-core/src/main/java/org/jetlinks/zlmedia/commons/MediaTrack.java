@@ -1,10 +1,18 @@
 package org.jetlinks.zlmedia.commons;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Setter
+@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, property = "codecType")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = VideoTrack.class, name = "0"),
+    @JsonSubTypes.Type(value = AudioTrack.class, name = "1")
+})
 public class MediaTrack {
 
     //Video = 0, Audio = 1

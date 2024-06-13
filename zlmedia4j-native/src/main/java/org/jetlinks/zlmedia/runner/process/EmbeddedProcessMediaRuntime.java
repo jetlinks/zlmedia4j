@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.utils.Sets;
-import org.jetlinks.zlmedia.runner.ZLMediaConfigs;
+import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -42,18 +42,18 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
     }
 
 
-    static String install(String target) {
+    static String install(String workdir) {
         return install(
             // zlmedia-native/linux/x86_64
             "zlmedia-native/"
                 + PlatformDependent.normalizedOs() + "/"
                 + PlatformDependent.normalizedArch()
                 + ".zip",
-            target
+            workdir
         );
     }
 
-    static String install(String file, String target) {
+    static String install(String file, String workdir) {
         String mediaServer = null;
         String path = file.contains(".") ? file.substring(0, file.lastIndexOf(".")) : file;
 
@@ -62,7 +62,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
             if (!resource.exists()) {
                 resource = new ClassPathResource(file);
             }
-            log.debug("install ZLMediaKit to {}/{}", target, path);
+            log.debug("install ZLMediaKit to {}/{}", workdir, path);
             try (InputStream stream = resource.getInputStream();
                  ZipArchiveInputStream zip = new ZipArchiveInputStream(stream)) {
                 ZipArchiveEntry entry;
@@ -71,14 +71,14 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         continue;
                     }
                     String filename = entry.getName();
-                    if(filename.startsWith(" __MACOSX")||filename.endsWith(".DS_Store")){
+                    if (filename.startsWith(" __MACOSX") || filename.endsWith(".DS_Store")) {
                         continue;
                     }
                     if (filename.endsWith("/")) {
                         continue;
                     }
 
-                    Path copyTo = Paths.get(target, path, filename);
+                    Path copyTo = Paths.get(workdir, path, filename);
                     File copyToFile = copyTo.toFile();
                     if (copyToFile.isDirectory()) {
                         continue;
@@ -94,7 +94,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         StreamUtils.copy(zip, output);
                     }
 
-                    if (filename.endsWith("MediaServer")||
+                    if (filename.endsWith("MediaServer") ||
                         //windows
                         filename.endsWith("MediaServer.exe")) {
                         mediaServer = copyTo.toString();
@@ -135,7 +135,11 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
         try {
             PosixFileAttributeView view = Files.getFileAttributeView(file, PosixFileAttributeView.class);
             view.setPermissions(Sets.newHashSet(
-                PosixFilePermission.values()));
+                PosixFilePermission.OWNER_READ,
+                PosixFilePermission.OWNER_WRITE,
+                PosixFilePermission.OWNER_EXECUTE,
+                PosixFilePermission.GROUP_READ,
+                PosixFilePermission.OTHERS_READ));
         } catch (Throwable ignore) {
         }
     }

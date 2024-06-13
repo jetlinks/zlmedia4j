@@ -13,15 +13,14 @@ import java.lang.reflect.Type;
 
 class RestfulClient {
 
-    private final ObjectMapper mapper;
-    private final WebClient client;
+    final ObjectMapper mapper;
+    final WebClient http;
 
-    public RestfulClient(WebClient client,
-                         ObjectMapper mapper) {
+    RestfulClient(WebClient client,
+                  ObjectMapper mapper) {
         this.mapper = mapper;
-        this.client = client;
+        this.http = client;
     }
-
 
     @SneakyThrows
     <R> Mono<RestfulResponse<R>> request(RestfulRequest<R> request) {
@@ -29,27 +28,58 @@ class RestfulClient {
         if (body != null && !(body instanceof String)) {
             body = mapper.writeValueAsString(body);
         }
-        return client
+        return http
             .post()
             .uri(request.apiAddress())
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(body == null ? "{}" : body)
             .exchangeToMono(response -> {
                 if (response.statusCode().is2xxSuccessful()) {
-                    if (MediaType.APPLICATION_JSON.includes(response.headers().asHttpHeaders().getContentType())) {
-                        return response
-                            .bodyToMono(String.class)
-                            .map(json -> decode(json, request));
-                    }
+                    return response
+                        .bodyToMono(String.class)
+                        .map(json -> decode(json, request));
                 }
                 return response
                     .bodyToMono(String.class)
-                    .flatMap(json -> Mono.error(new ZLMediaException(json)));
+                    .flatMap(resp -> Mono.error(new ZLMediaException(resp)));
             });
     }
 
     @SneakyThrows
-    private <R> RestfulResponse<R> decode(String json, RestfulRequest<R> request) {
+    <R> Mono<R> request(String api, Object request, Class<R> responseType) {
+        Object body = request;
+        if (body != null && !(body instanceof String)) {
+            body = mapper.writeValueAsString(body);
+        }
+        return http
+            .post()
+            .uri(api)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body == null ? "{}" : body)
+            .exchangeToMono(response -> {
+                if (response.statusCode().is2xxSuccessful()) {
+                    if (Void.class == responseType) {
+                        return response
+                            .releaseBody()
+                            .then(Mono.empty());
+                    }
+                    return response
+                        .bodyToMono(String.class)
+                        .map(json -> decode(json, responseType));
+                }
+                return response
+                    .bodyToMono(String.class)
+                    .flatMap(resp -> Mono.error(new ZLMediaException(resp)));
+            });
+    }
+
+    @SneakyThrows
+    <R> R decode(String json, Class<R> responseType) {
+        return mapper.readValue(json, responseType);
+    }
+
+    @SneakyThrows
+    <R> RestfulResponse<R> decode(String json, RestfulRequest<R> request) {
         return mapper.readValue(
             json,
             new TypeReference<RestfulResponse<R>>() {

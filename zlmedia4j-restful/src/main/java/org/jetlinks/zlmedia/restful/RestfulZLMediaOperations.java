@@ -26,16 +26,26 @@ import java.util.Map;
 
 public class RestfulZLMediaOperations implements ZLMediaOperations,
     StateOperations {
-    protected final ObjectMapper mapper;
-    private final HookOperations hookOperations;
+
     private final RestfulClient client;
 
+    private final HookOperations hookOperations;
+    private final MediaOperations mediaOperations;
+    private final RecordOperations recordOperations;
+    private final RtpOperations rtpOperations;
+    private final ProxyOperations proxyOperations;
 
-    public RestfulZLMediaOperations(WebClient client, ObjectMapper mapper) {
-        this.mapper = createObjectMapper(mapper);
-        this.client = new RestfulClient(client, this.mapper);
-        this.hookOperations = new RestfulHookOperationsImpl(this.mapper);
 
+    public RestfulZLMediaOperations(WebClient client,
+                                    ZLMediaConfigs configs,
+                                    ObjectMapper mapper) {
+
+        this.client = new RestfulClient(client, createObjectMapper(mapper));
+        this.hookOperations = new RestfulHookOperationsImpl(this.client.mapper);
+        this.mediaOperations = new RestfulMediaOperations(this.client, configs);
+        this.recordOperations = new RestfulRecordOperations(this.client);
+        this.rtpOperations = new RestfulRtpOperations(this.client);
+        this.proxyOperations = new RestfulProxyOperations(this.client);
     }
 
     static NameTransformer SNAKE_CASE = new NameTransformer() {
@@ -99,22 +109,22 @@ public class RestfulZLMediaOperations implements ZLMediaOperations,
 
     @Override
     public MediaOperations opsForMedia() {
-        return null;
+        return mediaOperations;
     }
 
     @Override
     public RecordOperations opsForRecord() {
-        return null;
+        return recordOperations;
     }
 
     @Override
     public RtpOperations opsForRtp() {
-        return null;
+        return rtpOperations;
     }
 
     @Override
     public ProxyOperations opsForProxy() {
-        return null;
+        return proxyOperations;
     }
 
     @Override

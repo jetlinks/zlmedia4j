@@ -7,7 +7,7 @@ import org.apache.commons.configuration2.INIConfiguration;
 import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.jetlinks.zlmedia.ZLMediaOperations;
 import org.jetlinks.zlmedia.restful.RestfulZLMediaOperations;
-import org.jetlinks.zlmedia.runner.ZLMediaConfigs;
+import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
 import org.jetlinks.zlmedia.runner.ZLMediaRuntime;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.web.reactive.function.client.ClientRequest;
@@ -31,6 +31,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 基于 {@link ProcessBuilder} fork 运行zlmedia进程.
+ *
+ * @author zhouhao
+ * @since 2.2
+ */
 @Slf4j
 public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
@@ -49,7 +55,6 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
     private final ZLMediaOperations operations;
     private final Map<String, String> configs = new ConcurrentHashMap<>();
-    private final ZLMediaConfigs mediaConfigs;
 
     //api访问密钥
     private final String secret = UUID.randomUUID().toString().replace("-", "");
@@ -66,7 +71,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     }
 
     @SneakyThrows
-    private static void storeInit(Map<String,String> conf, File path){
+    private static void storeInit(Map<String, String> conf, File path) {
         Configurations configs = new Configurations();
         INIConfiguration ini = configs.ini(path);
         conf.forEach(ini::setProperty);
@@ -81,9 +86,8 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                                  ObjectMapper mapper,
                                  ZLMediaConfigs configs) {
         this.processFile = processFile;
-        this.mediaConfigs = configs;
         this.configs.putAll(configs.createConfigs());
-        this.configs.put("api.secret",secret);
+        this.configs.put("api.secret", secret);
         this.operations = new RestfulZLMediaOperations(
             builder
                 .clone()
@@ -98,7 +102,9 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                                  .toUri())
                         .build()
                 ))
-                .build(), mapper);
+                .build(),
+            configs,
+            mapper);
     }
 
     @Override
@@ -130,7 +136,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     protected void start0() {
         File file = new File(processFile);
 
-        storeInit(this.configs,new File(new File(processFile).getParent(),"config.ini"));
+        storeInit(this.configs, new File(new File(processFile).getParent(), "config.ini"));
 
         Path pidFile = Paths.get(processFile + ".pid");
         if (pidFile.toFile().exists()) {

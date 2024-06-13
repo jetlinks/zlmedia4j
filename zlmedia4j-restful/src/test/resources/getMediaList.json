@@ -1,0 +1,51 @@
+{
+    "code": 0,
+    "data": [
+        {
+            "app": "live",
+            "readerCount": 0,
+            "totalReaderCount": 0,
+            "schema": "rtsp",
+            "stream": "obs",
+            "originSock": {
+                "identifier": "140241931428384",
+                "local_ip": "127.0.0.1",
+                "local_port": 1935,
+                "peer_ip": "127.0.0.1",
+                "peer_port": 50097
+            },
+            "originType": 1,
+            "originTypeStr": "MediaOriginType::rtmp_push",
+            "originUrl": "rtmp://127.0.0.1:1935/live/hks2",
+            "createStamp": 1602205811,
+            "aliveSecond": 100,
+            "bytesSpeed": 12345,
+            "tracks": [
+                {
+                    "channels": 1,
+                    "codec_id": 2,
+                    "codec_id_name": "CodecAAC",
+                    "codec_type": 1,
+                    "ready": true,
+                    "frames": 1119,
+                    "sample_bit": 16,
+                    "sample_rate": 8000
+                },
+                {
+                    "codec_id": 0,
+                    "codec_id_name": "CodecH264",
+                    "codec_type": 0,
+                    "fps": 59,
+                    "frames": 1119,
+                    "gop_interval_ms": 1993,
+                    "gop_size": 60,
+                    "key_frames": 21,
+                    "height": 720,
+                    "ready": true,
+                    "width": 1280
+                }
+            ],
+            "vhost": "__defaultVhost__"
+        }
+    ]
+}

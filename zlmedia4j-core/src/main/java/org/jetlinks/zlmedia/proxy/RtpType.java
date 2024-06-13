@@ -1,7 +1,7 @@
 package org.jetlinks.zlmedia.proxy;
 
-public enum RtpType {
-    tcp,
-    udp
-
+public interface RtpType {
+    int tcp = 0;
+    int udp = 1;
+    int multicast = 2;
 }

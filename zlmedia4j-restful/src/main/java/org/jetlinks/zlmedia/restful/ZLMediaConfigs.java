@@ -1,8 +1,7 @@
-package org.jetlinks.zlmedia.runner;
+package org.jetlinks.zlmedia.restful;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.compress.utils.Sets;
 import org.jetlinks.zlmedia.ZLMediaOperations;
 
 import java.io.File;
@@ -11,8 +10,8 @@ import java.util.*;
 @Getter
 @Setter
 public class ZLMediaConfigs {
-    private static final Set<String> ALL_HOOKS = Collections.unmodifiableSet(
-        Sets.newHashSet(
+    private static final List<String> ALL_HOOKS =
+        Arrays.asList(
             "on_flow_report",
             "on_http_access",
             "on_play",
@@ -29,8 +28,7 @@ public class ZLMediaConfigs {
             "on_server_keepalive",
             "on_send_rtp_stopped",
             "on_rtp_server_timeout"
-        )
-    );
+        );
 
     /**
      * 数据存储路径,截图,录像等数据存储到此目录.
@@ -65,14 +63,22 @@ public class ZLMediaConfigs {
      */
     private Map<String, String> others;
 
+    /**
+     * 对外提供服务的域名或者ip地址
+     */
+    private String publicHost;
+
     public Map<String, String> createConfigs() {
         Map<String, String> configs = new HashMap<>();
+
         if (others != null) {
             configs.putAll(others);
         }
+        //服务ID
         if (serverId != null) {
             configs.put("general.mediaServerId", serverId);
         }
+        //hook配置
         if (hookBasePath != null) {
             configs.put("hook.enable", "1");
             String prefix = hookBasePath;
@@ -86,6 +92,7 @@ public class ZLMediaConfigs {
 
         ports.applyConfig(configs);
 
+        //存储相关配置
         if (dataPath != null) {
             File file = new File(dataPath);
             String path = file.getAbsolutePath();
@@ -95,6 +102,10 @@ public class ZLMediaConfigs {
             configs.put("api.defaultSnap", path + "/snapshot.png");
             configs.put("protocol.mp4_save_path", path + "/mp4");
             configs.put("protocol.hls_save_path", path + "/hls");
+        }
+
+        if (publicHost != null) {
+            configs.put("rtc.externIP", publicHost);
         }
         return configs;
     }
