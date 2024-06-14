@@ -73,12 +73,12 @@ public class ZLMediaConfigs {
     /**
      * 自定义密钥
      */
-    private String secret = UUID.randomUUID().toString().replace("-","");
+    private String secret = UUID.randomUUID().toString().replace("-", "");
 
     public Map<String, String> createConfigs() {
         Map<String, String> configs = new HashMap<>();
 
-        configs.put("api.secret",secret);
+        configs.put("api.secret", secret);
 
         if (others != null) {
             configs.putAll(others);
@@ -120,6 +120,21 @@ public class ZLMediaConfigs {
         return configs;
     }
 
+    public void setConfig(String key, String value) {
+        if (ports.setConfig(key, value)) {
+            return;
+        }
+        switch (key) {
+            case "api.secret":
+                secret = value;
+                break;
+            case "general.mediaServerId":
+                serverId = value;
+                break;
+
+        }
+    }
+
     @Getter
     @Setter
     public static class Ports {
@@ -130,6 +145,34 @@ public class ZLMediaConfigs {
         private int rtmp = 1935;
         private int rtc = 8000;
         private int srt = 9000;
+
+        public boolean setConfig(String key, String value) {
+            switch (key) {
+                case "rtsp.port":
+                    setRtsp(Integer.parseInt(value));
+                    return true;
+                case "rtmp.port":
+                    setRtmp(Integer.parseInt(value));
+                    return true;
+                case "http.port":
+                    setHttp(Integer.parseInt(value));
+                    return true;
+                case "rtp_proxy.port":
+                    setRtp(Integer.parseInt(value));
+                    return true;
+                case "rtp_proxy.port_range":
+                    String[] range = value.split("-");
+                    setRtpRange(new int[]{Integer.parseInt(range[0]), Integer.parseInt(range[1])});
+                    return true;
+                case "rtc.port":
+                    setRtc(Integer.parseInt(value));
+                    return true;
+                case "srt.port":
+                    setSrt(Integer.parseInt(value));
+                    return true;
+            }
+            return false;
+        }
 
         public void applyConfig(Map<String, String> config) {
             config.put("http.port", String.valueOf(http));
