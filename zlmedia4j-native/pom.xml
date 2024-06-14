@@ -80,12 +80,6 @@
 
         <profile>
             <id>osx-x86_64</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                    <arch>x86_64</arch>
-                </os>
-            </activation>
             <properties>
                 <zlmedia.os>osx</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>
@@ -95,12 +89,6 @@
 
         <profile>
             <id>osx-aarch_64</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                    <arch>aarch_64</arch>
-                </os>
-            </activation>
             <properties>
                 <zlmedia.os>osx</zlmedia.os>
                 <zlmedia.arch>aarch_64</zlmedia.arch>
@@ -110,12 +98,6 @@
 
         <profile>
             <id>linux-x86_64</id>
-            <activation>
-                <os>
-                    <family>linux</family>
-                    <arch>x86_64</arch>
-                </os>
-            </activation>
             <properties>
                 <zlmedia.os>linux</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>
@@ -125,12 +107,6 @@
 
         <profile>
             <id>linux-aarch_64</id>
-            <activation>
-                <os>
-                    <family>linux</family>
-                    <arch>aarch_64</arch>
-                </os>
-            </activation>
             <properties>
                 <zlmedia.os>linux</zlmedia.os>
                 <zlmedia.arch>aarch_64</zlmedia.arch>
@@ -140,12 +116,6 @@
 
         <profile>
             <id>windows-x86_64</id>
-            <activation>
-                <os>
-                    <family>windows</family>
-                    <arch>x86_64</arch>
-                </os>
-            </activation>
             <properties>
                 <zlmedia.os>windows</zlmedia.os>
                 <zlmedia.arch>x86_64</zlmedia.arch>

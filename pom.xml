@@ -328,7 +328,7 @@
         </repository>
 
         <repository>
-            <id>hsweb-nexus</id>
+            <id>jetlinks-nexus</id>
             <name>Nexus Release Repository</name>
             <url>https://nexus.jetlinks.cn/content/groups/public/</url>
             <snapshots>

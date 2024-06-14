@@ -2,6 +2,7 @@ package org.jetlinks.zlmedia.runner.process;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.util.internal.PlatformDependent;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
@@ -22,9 +23,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
+    private static final Map<String, String> installed = new ConcurrentHashMap<>();
 
     public EmbeddedProcessMediaRuntime(String workdir) {
         this(workdir, new ZLMediaConfigs());
@@ -43,17 +47,21 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
 
 
     static String install(String workdir) {
-        return install(
-            // zlmedia-native/linux/x86_64
-            "zlmedia-native/"
-                + PlatformDependent.normalizedOs() + "/"
-                + PlatformDependent.normalizedArch()
-                + ".zip",
-            workdir
-        );
+        return installed.computeIfAbsent(
+            workdir,
+            dir -> install(
+                // zlmedia-native/linux/x86_64
+                "zlmedia-native/"
+                    + PlatformDependent.normalizedOs() + "/"
+                    + PlatformDependent.normalizedArch()
+                    + ".zip",
+                workdir
+            ));
+
     }
 
-    static String install(String file, String workdir) {
+    @SneakyThrows
+    private static String install(String file, String workdir) {
         String mediaServer = null;
         String path = file.contains(".") ? file.substring(0, file.lastIndexOf(".")) : file;
 
@@ -106,13 +114,14 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
 
         } catch (Throwable e) {
             log.error("install ZLMediaKit error", e);
-            return null;
-        }
-        //copy config.ini
-        if (mediaServer == null) {
-            return null;
+            throw e;
         }
 
+        if (mediaServer == null) {
+            throw new IllegalAccessException("No process file 'MediaServer' found in:" + path);
+        }
+
+        //copy config.ini
         ClassPathResource config = new ClassPathResource("zlmedia-native/config.ini");
         try (InputStream input = config.getInputStream();
              OutputStream output = Files.newOutputStream(
@@ -121,8 +130,8 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                  StandardOpenOption.TRUNCATE_EXISTING,
                  StandardOpenOption.WRITE)) {
             StreamUtils.copy(input, output);
-        } catch (Throwable ignore) {
-
+        } catch (Throwable e) {
+            throw e;
         }
 
         return mediaServer;

@@ -28,7 +28,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -55,9 +54,6 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
     private final ZLMediaOperations operations;
     private final Map<String, String> configs = new ConcurrentHashMap<>();
-
-    //api访问密钥
-    private final String secret = UUID.randomUUID().toString().replace("-", "");
 
     public ProcessZLMediaRuntime(String processFile) {
         this(processFile, new ZLMediaConfigs());
@@ -87,7 +83,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                                  ZLMediaConfigs configs) {
         this.processFile = processFile;
         this.configs.putAll(configs.createConfigs());
-        this.configs.put("api.secret", secret);
+        String secure = configs.getSecret();
         this.operations = new RestfulZLMediaOperations(
             builder
                 .clone()
@@ -97,7 +93,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                         .from(request)
                         .url(UriComponentsBuilder
                                  .fromUri(request.url())
-                                 .queryParam("secret", secret)
+                                 .queryParam("secret", secure)
                                  .build()
                                  .toUri())
                         .build()
@@ -169,6 +165,10 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             pidFile
                 .toFile()
                 .deleteOnExit();
+
+            disposable.add(() -> {
+                boolean ignore = pidFile.toFile().delete();
+            });
         }
 
         //监听进程退出
@@ -228,8 +228,14 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
     @Override
     public void dispose() {
+        disposable.dispose();
         if (null != process) {
             process.destroy();
+            try {
+                process.waitFor();
+            } catch (InterruptedException ignore) {
+
+            }
         }
     }
 }

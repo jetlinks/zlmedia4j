@@ -3,6 +3,7 @@ package org.jetlinks.zlmedia.restful;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetlinks.zlmedia.ZLMediaOperations;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.util.*;
@@ -27,7 +28,8 @@ public class ZLMediaConfigs {
             "on_server_exited",
             "on_server_keepalive",
             "on_send_rtp_stopped",
-            "on_rtp_server_timeout"
+            "on_rtp_server_timeout",
+            "on_stream_not_found"
         );
 
     /**
@@ -42,6 +44,11 @@ public class ZLMediaConfigs {
      * @see org.jetlinks.zlmedia.restful.RestfulHookOperations#fireEvent(String, String)
      */
     private String hookBasePath;
+
+    /**
+     * hook通知参数
+     */
+    private String hookParams = "";
 
     /**
      * hook通知的事件类型,默认全部
@@ -64,12 +71,14 @@ public class ZLMediaConfigs {
     private Map<String, String> others;
 
     /**
-     * 对外提供服务的域名或者ip地址
+     * 自定义密钥
      */
-    private String publicHost;
+    private String secret = UUID.randomUUID().toString().replace("-","");
 
     public Map<String, String> createConfigs() {
         Map<String, String> configs = new HashMap<>();
+
+        configs.put("api.secret",secret);
 
         if (others != null) {
             configs.putAll(others);
@@ -86,7 +95,11 @@ public class ZLMediaConfigs {
                 prefix = prefix + "/";
             }
             for (String hook : hooks) {
-                configs.put("hook." + hook, prefix + hook);
+                String url = prefix + hook;
+                if (StringUtils.hasText(hookParams)) {
+                    url = url + "?" + hookParams;
+                }
+                configs.put("hook." + hook, url);
             }
         }
 
@@ -100,13 +113,10 @@ public class ZLMediaConfigs {
             configs.put("http.rootPath", path);
             configs.put("api.snapRoot", path + "/snapshot/");
             configs.put("api.defaultSnap", path + "/snapshot.png");
-            configs.put("protocol.mp4_save_path", path + "/mp4");
-            configs.put("protocol.hls_save_path", path + "/hls");
+            configs.put("protocol.mp4_save_path", path);
+            configs.put("protocol.hls_save_path", path);
         }
 
-        if (publicHost != null) {
-            configs.put("rtc.externIP", publicHost);
-        }
         return configs;
     }
 

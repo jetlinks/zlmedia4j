@@ -15,8 +15,10 @@ public class MediaInfo {
 
     private String vhost;
 
+    //本协议观看人数
     private int readerCount;
 
+    //观看总人数，包括hls/rtsp/rtmp/http-flv/ws-flv
     private int totalReaderCount;
 
     private String stream;
