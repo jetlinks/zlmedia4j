@@ -206,7 +206,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         }
         //启动中...
         if (startAwait.currentSubscriberCount() > 0) {
-            startAwait.tryEmitError(new ZLMediaProcessException(code));
+            startAwait.tryEmitError(new ZLMediaProcessException(code, "ZLMediaKit start failed,code:" + code));
         } else {
             log.warn("ZLMediaKit exit with code:{}", code);
         }
