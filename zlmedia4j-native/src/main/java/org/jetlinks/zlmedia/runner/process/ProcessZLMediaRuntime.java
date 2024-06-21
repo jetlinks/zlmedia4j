@@ -176,7 +176,11 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             .add(
                 Mono
                     .<DataBuffer>fromCallable(() -> {
-                        processExit(process.waitFor());
+                        try {
+                            processExit(process.waitFor());
+                        } catch (InterruptedException ignore) {
+                            processExit(-1);
+                        }
                         return null;
                     })
                     .subscribeOn(Schedulers.boundedElastic())

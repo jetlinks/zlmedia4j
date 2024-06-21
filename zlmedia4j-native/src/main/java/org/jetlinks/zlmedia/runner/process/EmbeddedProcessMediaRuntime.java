@@ -63,14 +63,13 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
     @SneakyThrows
     private static String install(String file, String workdir) {
         String mediaServer = null;
-        String path = file.contains(".") ? file.substring(0, file.lastIndexOf(".")) : file;
 
         try {
             Resource resource = new FileSystemResource(file);
             if (!resource.exists()) {
                 resource = new ClassPathResource(file);
             }
-            log.debug("install ZLMediaKit to {}/{}", workdir, path);
+            log.debug("install ZLMediaKit to {}", workdir);
             try (InputStream stream = resource.getInputStream();
                  ZipArchiveInputStream zip = new ZipArchiveInputStream(stream)) {
                 ZipArchiveEntry entry;
@@ -86,7 +85,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         continue;
                     }
 
-                    Path copyTo = Paths.get(workdir, path, filename);
+                    Path copyTo = Paths.get(workdir, filename);
                     File copyToFile = copyTo.toFile();
                     if (copyToFile.isDirectory()) {
                         continue;
@@ -118,7 +117,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
         }
 
         if (mediaServer == null) {
-            throw new IllegalAccessException("No process file 'MediaServer' found in:" + path);
+            throw new IllegalAccessException("No process file 'MediaServer' found in:" + workdir);
         }
 
         //copy config.ini
