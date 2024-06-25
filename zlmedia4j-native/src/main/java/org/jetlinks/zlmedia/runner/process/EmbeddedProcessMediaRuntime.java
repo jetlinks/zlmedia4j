@@ -100,10 +100,10 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         StandardOpenOption.WRITE)) {
                         StreamUtils.copy(zip, output);
                     }
-
-                    if (filename.endsWith("MediaServer") ||
+                    String _fileName=copyToFile.getName();
+                    if (_fileName.equals("MediaServer") ||
                         //windows
-                        filename.endsWith("MediaServer.exe")) {
+                        _fileName.equals("MediaServer.exe")) {
                         mediaServer = copyTo.toString();
                     }
                     // chmod +x MediaServer
