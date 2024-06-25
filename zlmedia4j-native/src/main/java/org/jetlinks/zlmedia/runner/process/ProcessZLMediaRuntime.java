@@ -29,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 基于 {@link ProcessBuilder} fork 运行zlmedia进程.
@@ -51,6 +52,8 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     private final Disposable.Composite disposable = Disposables.composite();
 
     private final Sinks.One<Void> startAwait = Sinks.one();
+
+    private int restartCount;
 
     private final ZLMediaOperations operations;
     private final Map<String, String> configs = new ConcurrentHashMap<>();
@@ -196,7 +199,10 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                     .isAlive())
                 .filter(Boolean::booleanValue)
                 .take(1)
-                .subscribe(ignore -> startAwait.tryEmitEmpty())
+                .subscribe(ignore -> {
+                    restartCount = 0;
+                    startAwait.tryEmitEmpty();
+                })
         );
     }
 
@@ -214,7 +220,18 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         } else {
             log.warn("ZLMediaKit exit with code:{}", code);
         }
-
+        if (restartCount > 10) {
+            log.error("ZLMediaKit exit with code:{},restart count > 10,stop restart", code);
+            return;
+        }
+        Schedulers
+            .boundedElastic()
+            .schedule(() -> {
+                if (disposable.isDisposed()) {
+                    return;
+                }
+                start0();
+            }, 2, TimeUnit.SECONDS);
         //  disposable.dispose();
     }
 
