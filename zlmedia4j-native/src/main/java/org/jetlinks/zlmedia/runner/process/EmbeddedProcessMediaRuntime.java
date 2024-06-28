@@ -78,7 +78,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         continue;
                     }
                     String filename = entry.getName();
-                    if (filename.startsWith(" __MACOSX") || filename.endsWith(".DS_Store")) {
+                    if (filename.contains(" __MACOSX") || filename.endsWith(".DS_Store")) {
                         continue;
                     }
                     if (filename.endsWith("/")) {
@@ -100,7 +100,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                         StandardOpenOption.WRITE)) {
                         StreamUtils.copy(zip, output);
                     }
-                    String _fileName=copyToFile.getName();
+                    String _fileName = copyToFile.getName();
                     if (_fileName.equals("MediaServer") ||
                         //windows
                         _fileName.equals("MediaServer.exe")) {
