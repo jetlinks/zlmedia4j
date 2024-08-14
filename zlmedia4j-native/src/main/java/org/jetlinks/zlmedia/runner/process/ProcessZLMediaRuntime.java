@@ -224,6 +224,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             log.error("ZLMediaKit exit with code:{},restart count > 10,stop restart", code);
             return;
         }
+        restartCount++;
         Schedulers
             .boundedElastic()
             .schedule(() -> {
