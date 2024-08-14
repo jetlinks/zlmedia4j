@@ -131,7 +131,10 @@ public class ZLMediaConfigs {
             case "general.mediaServerId":
                 serverId = value;
                 break;
-
+            default:
+                if (others != null) {
+                    others.put(key, value);
+                }
         }
     }
 
