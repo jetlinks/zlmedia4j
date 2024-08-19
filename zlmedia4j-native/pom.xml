@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.jetlinks</groupId>
         <artifactId>zlmedia4j</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </parent>
 
     <artifactId>zlmedia4j-native</artifactId>
@@ -73,6 +73,139 @@
                                 <exclude>**/*.class</exclude>
                             </excludes>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>build-all-native</id>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>${project.basedir}/lib</directory>
+                        <includes>
+                            <include>**/*.zip</include>
+                        </includes>
+                        <targetPath>zlmedia-native</targetPath>
+                        <filtering>false</filtering>
+                    </resource>
+                </resources>
+                <plugins>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                                <configuration>
+                                   <excludeResources>true</excludeResources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>zlmedia-native/*/*.zip</exclude>
+                            </excludes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>osx-x86_64</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>osx-x86_64</classifier>
+                                    <excludes>
+                                        <exclude>**/*.class</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>zlmedia-native/osx/x86_64.zip</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>osx-aarch_64</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>osx-aarch_64</classifier>
+                                    <excludes>
+                                        <exclude>**/*.class</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>zlmedia-native/osx/aarch_64.zip</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>linux-x86_64</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>linux-x86_64</classifier>
+                                    <excludes>
+                                        <exclude>**/*.class</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>zlmedia-native/linux/x86_64.zip</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>linux-aarch_64</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>linux-aarch_64</classifier>
+                                    <excludes>
+                                        <exclude>**/*.class</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>zlmedia-native/linux/aarch_64.zip</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>windows-x86_64</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>windows-x86_64</classifier>
+                                    <excludes>
+                                        <exclude>**/*.class</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>zlmedia-native/windows/x86_64.zip</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
