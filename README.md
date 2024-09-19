@@ -10,13 +10,13 @@
     <dependency>
         <groupId>org.jetlinks</groupId>
         <artifactId>zlmedia4j-native</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1</version>
     </dependency>
 
     <dependency>
         <groupId>org.jetlinks</groupId>
         <artifactId>zlmedia4j-native</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1</version>
         <!-- linux-x86_64、linux-aarch_64、osx-x86_64、osx-aarch_64、windows-x86_64 -->
         <classifier>linux-x86_64</classifier>
     </dependency>
