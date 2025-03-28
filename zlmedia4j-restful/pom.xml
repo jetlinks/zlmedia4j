@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.jetlinks</groupId>
         <artifactId>zlmedia4j</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <version>1.0.2</version>
     </parent>
 
     <artifactId>zlmedia4j-restful</artifactId>
