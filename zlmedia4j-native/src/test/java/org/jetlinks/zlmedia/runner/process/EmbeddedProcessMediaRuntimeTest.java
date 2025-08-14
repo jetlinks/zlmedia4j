@@ -16,9 +16,12 @@ class EmbeddedProcessMediaRuntimeTest {
     @BeforeAll
     static void init() {
         ZLMediaConfigs configs = new ZLMediaConfigs();
+        configs.getPorts().setSrt(9999);
         configs.getPorts().setRtsp(11554);
         configs.getPorts().setRtmp(11935);
+        configs.getPorts().setRtc(8001);
         configs.getPorts().setSrt(19000);
+        configs.setCommandArgs(new String[]{"-l","4"});
         runtime = new EmbeddedProcessMediaRuntime("target/zlmedia", configs);
         runtime.start()
                .as(StepVerifier::create)
