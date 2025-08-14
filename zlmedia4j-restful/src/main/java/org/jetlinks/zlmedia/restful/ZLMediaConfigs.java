@@ -75,6 +75,8 @@ public class ZLMediaConfigs {
      */
     private String secret = UUID.randomUUID().toString().replace("-", "");
 
+    private String[] commandArgs;
+
     public Map<String, String> createConfigs() {
         Map<String, String> configs = new HashMap<>();
 

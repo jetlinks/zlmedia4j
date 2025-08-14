@@ -5,6 +5,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.INIConfiguration;
 import org.apache.commons.configuration2.builder.fluent.Configurations;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetlinks.zlmedia.ZLMediaOperations;
 import org.jetlinks.zlmedia.restful.RestfulZLMediaOperations;
 import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
@@ -28,6 +29,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -42,13 +46,13 @@ import java.util.concurrent.TimeUnit;
 public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
     private final String processFile;
-
+    private final String[] args;
     private Process process;
 
     private final Sinks.Many<String> output = Sinks
-            .many()
-            .unicast()
-            .onBackpressureBuffer();
+        .many()
+        .unicast()
+        .onBackpressureBuffer();
 
     private final Disposable.Composite disposable = Disposables.composite();
 
@@ -87,35 +91,36 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                                  ZLMediaConfigs configs) {
         this.processFile = processFile;
         this.configs.putAll(configs.createConfigs());
+        this.args = configs.getCommandArgs();
         String secure = configs.getSecret();
         this.operations = new RestfulZLMediaOperations(
-                builder
-                        .clone()
-                        .baseUrl("http://127.0.0.1:" + configs.getPorts().getHttp())
-                        .filter((request, exchange) -> exchange.exchange(
-                                ClientRequest
-                                        .from(request)
-                                        .url(UriComponentsBuilder
-                                                     .fromUri(request.url())
-                                                     .queryParam("secret", secure)
-                                                     .build()
-                                                     .toUri())
-                                        .build()
-                        ))
-                        .build(),
-                configs,
-                mapper);
+            builder
+                .clone()
+                .baseUrl("http://127.0.0.1:" + configs.getPorts().getHttp())
+                .filter((request, exchange) -> exchange.exchange(
+                    ClientRequest
+                        .from(request)
+                        .url(UriComponentsBuilder
+                                 .fromUri(request.url())
+                                 .queryParam("secret", secure)
+                                 .build()
+                                 .toUri())
+                        .build()
+                ))
+                .build(),
+            configs,
+            mapper);
     }
 
     @Override
     @SneakyThrows
     public Mono<Void> start() {
         return Mono
-                //启动
-                .fromRunnable(this::start0)
-                .subscribeOn(Schedulers.boundedElastic())
-                //等待
-                .then(startAwait.asMono());
+            //启动
+            .fromRunnable(this::start0)
+            .subscribeOn(Schedulers.boundedElastic())
+            //等待
+            .then(startAwait.asMono());
     }
 
 
@@ -146,20 +151,25 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                 String pid = new String(Files.readAllBytes(pidFile));
                 log.warn("zlmedia process already exists, kill it:{}", pid);
                 Runtime
-                        .getRuntime()
-                        .exec(new String[]{"kill", pid})
-                        .waitFor();
+                    .getRuntime()
+                    .exec(new String[]{"kill", pid})
+                    .waitFor();
             } catch (Throwable e) {
                 log.warn("kill zlmedia process error", e);
             }
         }
 
+        List<String> cmd = new ArrayList<>();
+        cmd.add(file.getAbsolutePath());
+        if (ArrayUtils.isNotEmpty(this.args)) {
+            cmd.addAll(Arrays.asList(this.args));
+        }
         process = new ProcessBuilder()
-                .command(file.getAbsolutePath())
-                .directory(file.getParentFile())
-                .redirectErrorStream(true)
-                .inheritIO()
-                .start();
+            .command(cmd)
+            .directory(file.getParentFile())
+            .redirectErrorStream(true)
+            .inheritIO()
+            .start();
         long pid = getPid();
 
         if (pid > 0) {
@@ -169,8 +179,8 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                         StandardOpenOption.WRITE,
                         StandardOpenOption.CREATE);
             pidFile
-                    .toFile()
-                    .deleteOnExit();
+                .toFile()
+                .deleteOnExit();
 
             disposable.add(() -> {
                 boolean ignore = pidFile.toFile().delete();
@@ -179,33 +189,33 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
         //监听进程退出
         disposable
-                .add(
-                        Mono
-                                .<DataBuffer>fromCallable(() -> {
-                                    try {
-                                        processExit(process.waitFor());
-                                    } catch (InterruptedException ignore) {
-                                        processExit(-1);
-                                    }
-                                    return null;
-                                })
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .subscribe()
-                );
+            .add(
+                Mono
+                    .<DataBuffer>fromCallable(() -> {
+                        try {
+                            processExit(process.waitFor());
+                        } catch (InterruptedException ignore) {
+                            processExit(-1);
+                        }
+                        return null;
+                    })
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .subscribe()
+            );
 
         //定时检查是否启动成功
         disposable.add(
-                Flux.interval(Duration.ofSeconds(2), Duration.ofSeconds(1))
-                    .onBackpressureDrop()
-                    .concatMap(ignore -> operations
-                            .opsForState()
-                            .isAlive())
-                    .filter(Boolean::booleanValue)
-                    .take(1)
-                    .subscribe(ignore -> {
-                        restartCount = 0;
-                        startAwait.tryEmitEmpty();
-                    })
+            Flux.interval(Duration.ofSeconds(2), Duration.ofSeconds(1))
+                .onBackpressureDrop()
+                .concatMap(ignore -> operations
+                    .opsForState()
+                    .isAlive())
+                .filter(Boolean::booleanValue)
+                .take(1)
+                .subscribe(ignore -> {
+                    restartCount = 0;
+                    startAwait.tryEmitEmpty();
+                })
         );
         if (isDisposed()) {
             process.destroy();
@@ -233,13 +243,13 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         process = null;
         restartCount++;
         Schedulers
-                .boundedElastic()
-                .schedule(() -> {
-                    if (disposable.isDisposed()) {
-                        return;
-                    }
-                    start0();
-                }, 2, TimeUnit.SECONDS);
+            .boundedElastic()
+            .schedule(() -> {
+                if (disposable.isDisposed()) {
+                    return;
+                }
+                start0();
+            }, 2, TimeUnit.SECONDS);
         //  disposable.dispose();
     }
 
