@@ -149,6 +149,12 @@ public class ZLMediaConfigs {
         private int rtsp = 554;
         private int rtmp = 1935;
         private int rtc = 8000;
+
+        private int rtcIcePort = 0;
+        private int rtcIceTcpPort = 0;
+        private int rtcSignalingPort = 0;
+        private int rtcSignalingSslPort = 0;
+
         private int srt = 9000;
 
         public boolean setConfig(String key, String value) {
@@ -172,6 +178,18 @@ public class ZLMediaConfigs {
                 case "rtc.port":
                     setRtc(Integer.parseInt(value));
                     return true;
+                case "rtc.rtcSignalingPort":
+                    setRtcSignalingPort(Integer.parseInt(value));
+                    return true;
+                case "rtc.signalingSslPort":
+                    setRtcSignalingSslPort(Integer.parseInt(value));
+                    return true;
+                case "rtc.rtcIcePort":
+                    setRtcIcePort(Integer.parseInt(value));
+                    return true;
+                case "rtc.rtcIceTcpPort":
+                    setRtcIceTcpPort(Integer.parseInt(value));
+                    return true;
                 case "srt.port":
                     setSrt(Integer.parseInt(value));
                     return true;
@@ -190,6 +208,12 @@ public class ZLMediaConfigs {
 
             config.put("rtc.port", String.valueOf(rtc));
             config.put("rtc.tcpPort", String.valueOf(rtc));
+
+            config.put("rtc.signalingPort", String.valueOf(rtcSignalingPort));
+            config.put("rtc.signalingSslPort", String.valueOf(rtcSignalingSslPort));
+
+            config.put("rtc.rtcIcePort", String.valueOf(rtcIcePort));
+            config.put("rtc.rtcIceTcpPort", String.valueOf(rtcIceTcpPort));
 
             config.put("srt.port", String.valueOf(srt));
         }
