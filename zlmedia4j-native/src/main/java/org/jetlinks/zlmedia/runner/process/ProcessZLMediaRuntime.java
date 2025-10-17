@@ -54,7 +54,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         .unicast()
         .onBackpressureBuffer();
 
-    private final Disposable.Composite disposable = Disposables.composite();
+    private final Disposable.Swap disposable = Disposables.swap();
 
     private final Sinks.One<Void> startAwait = Sinks.one();
 
@@ -172,6 +172,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             .start();
         long pid = getPid();
 
+        Disposable.Composite disp = Disposables.composite();
         if (pid > 0) {
             Files.write(pidFile,
                         String.valueOf(pid).getBytes(),
@@ -182,29 +183,24 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                 .toFile()
                 .deleteOnExit();
 
-            disposable.add(() -> {
+            disp.add(() -> {
                 boolean ignore = pidFile.toFile().delete();
             });
         }
-
-        //监听进程退出
-        disposable
-            .add(
-                Mono
-                    .<DataBuffer>fromCallable(() -> {
-                        try {
-                            processExit(process.waitFor());
-                        } catch (InterruptedException ignore) {
-                            processExit(-1);
-                        }
-                        return null;
-                    })
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .subscribe()
-            );
-
-        //定时检查是否启动成功
-        disposable.add(
+        disp.add(
+            Mono
+                .<DataBuffer>fromCallable(() -> {
+                    try {
+                        processExit(process.waitFor());
+                    } catch (InterruptedException ignore) {
+                        processExit(-1);
+                    }
+                    return null;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe()
+        );
+        disp.add(
             Flux.interval(Duration.ofSeconds(2), Duration.ofSeconds(1))
                 .onBackpressureDrop()
                 .concatMap(ignore -> operations
@@ -217,6 +213,10 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                     startAwait.tryEmitEmpty();
                 })
         );
+
+        //监听进程退出
+        disposable.update(disp);
+
         if (isDisposed()) {
             process.destroy();
         }
@@ -264,6 +264,10 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         return operations;
     }
 
+    @Override
+    public boolean isDisposed() {
+        return disposable.isDisposed();
+    }
 
     @Override
     public void dispose() {
