@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.utils.Sets;
+import org.apache.commons.io.IOUtils;
 import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
@@ -14,9 +15,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -84,13 +87,20 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                     if (filename.endsWith("/")) {
                         continue;
                     }
-
                     Path copyTo = Paths.get(workdir, filename);
+                    Files.createDirectories(copyTo.getParent());
+
+                    // 处理软链接
+                    if (entry.isUnixSymlink()) {
+                        String linkTarget = StreamUtils.copyToString(zip, StandardCharsets.UTF_8);
+                        Files.createSymbolicLink(copyTo, Paths.get(linkTarget));
+                        continue;
+                    }
+
                     File copyToFile = copyTo.toFile();
                     if (copyToFile.isDirectory()) {
                         continue;
                     }
-                    boolean ignore = copyToFile.getParentFile().mkdirs();
                     log.debug("copy {} to {}", filename, copyTo);
 
                     try (OutputStream output = Files.newOutputStream(
