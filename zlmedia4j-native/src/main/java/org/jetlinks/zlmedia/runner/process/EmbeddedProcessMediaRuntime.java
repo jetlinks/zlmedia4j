@@ -4,8 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.util.internal.PlatformDependent;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.UnixStat;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.io.IOUtils;
 import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
@@ -52,95 +56,160 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
     static String install(String workdir) {
         return installed.computeIfAbsent(
             workdir,
-            dir -> install(
+            dir -> install0(
                 // zlmedia-native/linux/x86_64
                 "zlmedia-native/"
                     + PlatformDependent.normalizedOs() + "/"
-                    + PlatformDependent.normalizedArch()
-                    + ".zip",
+                    + PlatformDependent.normalizedArch(),
                 workdir
             ));
 
     }
 
-    @SneakyThrows
-    private static String install(String file, String workdir) {
-        String mediaServer = null;
 
-        try {
+    @SneakyThrows
+    private static String installTar(InputStream tar, String workdir) {
+        String mediaServer = null;
+        try (TarArchiveInputStream zip = new TarArchiveInputStream(tar)) {
+            TarArchiveEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String filename = entry.getName();
+                if (filename.contains(" __MACOSX") || filename.endsWith(".DS_Store")) {
+                    continue;
+                }
+                if (filename.endsWith("/")) {
+                    continue;
+                }
+                Path copyTo = Paths.get(workdir, filename);
+                Files.createDirectories(copyTo.getParent());
+
+                // 处理软链接
+                if (entry.isSymbolicLink()) {
+                    Files.createSymbolicLink(copyTo, Paths.get(entry.getLinkName()));
+                    continue;
+                }
+
+                File copyToFile = copyTo.toFile();
+                if (copyToFile.isDirectory()) {
+                    continue;
+                }
+                log.debug("copy {} to {}", filename, copyTo);
+
+                try (OutputStream output = Files.newOutputStream(
+                    copyTo,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE)) {
+                    StreamUtils.copy(zip, output);
+                }
+                String _fileName = copyToFile.getName();
+                if (_fileName.equals("MediaServer") ||
+                    //windows
+                    _fileName.equals("MediaServer.exe")) {
+                    mediaServer = copyTo.toString();
+                }
+                // chmod +x MediaServer
+                chmodX(copyTo);
+            }
+        }
+        return mediaServer;
+    }
+
+    @SneakyThrows
+    private static String install0(String basePath, String workdir) {
+        String[] supports = {".zip", ".tar.gz",".tar"};
+        String suffix = null;
+        InputStream stream = null;
+        for (String _suffix : supports) {
+            String file = basePath + _suffix;
             Resource resource = new FileSystemResource(file);
             if (!resource.exists()) {
                 resource = new ClassPathResource(file);
             }
-            log.debug("install ZLMediaKit to {}", workdir);
-            try (InputStream stream = resource.getInputStream();
-                 ZipArchiveInputStream zip = new ZipArchiveInputStream(stream)) {
-                ZipArchiveEntry entry;
-                while ((entry = zip.getNextEntry()) != null) {
-                    if (entry.isDirectory()) {
-                        continue;
-                    }
-                    String filename = entry.getName();
-                    if (filename.contains(" __MACOSX") || filename.endsWith(".DS_Store")) {
-                        continue;
-                    }
-                    if (filename.endsWith("/")) {
-                        continue;
-                    }
-                    Path copyTo = Paths.get(workdir, filename);
-                    Files.createDirectories(copyTo.getParent());
+            if (resource.exists()) {
+                suffix = _suffix;
+                stream = resource.getInputStream();
+                break;
+            }
+        }
+        if (suffix == null) {
+            throw new IllegalAccessException("Not found ZLMedia Runtime Lib" + workdir);
+        }
 
-                    // 处理软链接
-                    if (entry.isUnixSymlink()) {
-                        String linkTarget = StreamUtils.copyToString(zip, StandardCharsets.UTF_8);
-                        Files.createSymbolicLink(copyTo, Paths.get(linkTarget));
-                        continue;
-                    }
+        log.debug("install ZLMediaKit to {}", workdir);
+        try {
+            String mediaServer = switch (suffix) {
+                case ".zip" -> installZip(stream, workdir);
+                case ".tar" -> installTar(stream, workdir);
+                case ".tar.gz" -> installTar(new GzipCompressorInputStream(stream), workdir);
+                default -> throw new IllegalStateException("Unexpected file: " + suffix);
+            };
 
-                    File copyToFile = copyTo.toFile();
-                    if (copyToFile.isDirectory()) {
-                        continue;
-                    }
-                    log.debug("copy {} to {}", filename, copyTo);
-
-                    try (OutputStream output = Files.newOutputStream(
-                        copyTo,
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING,
-                        StandardOpenOption.WRITE)) {
-                        StreamUtils.copy(zip, output);
-                    }
-                    String _fileName = copyToFile.getName();
-                    if (_fileName.equals("MediaServer") ||
-                        //windows
-                        _fileName.equals("MediaServer.exe")) {
-                        mediaServer = copyTo.toString();
-                    }
-                    // chmod +x MediaServer
-                    chmodX(copyTo);
-                }
+            if (mediaServer == null) {
+                throw new IllegalAccessException("No process file 'MediaServer' found in:" + workdir);
             }
 
+            //copy config.ini
+            ClassPathResource config = new ClassPathResource("zlmedia-native/config.ini");
+            try (InputStream input = config.getInputStream();
+                 OutputStream output = Files.newOutputStream(
+                     Paths.get(mediaServer).getParent().resolve("config.ini"),
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.TRUNCATE_EXISTING,
+                     StandardOpenOption.WRITE)) {
+                StreamUtils.copy(input, output);
+            }
+            return mediaServer;
         } catch (Throwable e) {
             log.error("install ZLMediaKit error", e);
             throw e;
         }
+    }
 
-        if (mediaServer == null) {
-            throw new IllegalAccessException("No process file 'MediaServer' found in:" + workdir);
-        }
+    @SneakyThrows
+    private static String installZip(InputStream stream, String workdir) {
+        String mediaServer = null;
+        try (ZipArchiveInputStream zip = new ZipArchiveInputStream(stream)) {
+            ZipArchiveEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String filename = entry.getName();
+                if (filename.contains(" __MACOSX") || filename.endsWith(".DS_Store")) {
+                    continue;
+                }
+                if (filename.endsWith("/")) {
+                    continue;
+                }
+                Path copyTo = Paths.get(workdir, filename);
+                Files.createDirectories(copyTo.getParent());
 
-        //copy config.ini
-        ClassPathResource config = new ClassPathResource("zlmedia-native/config.ini");
-        try (InputStream input = config.getInputStream();
-             OutputStream output = Files.newOutputStream(
-                 Paths.get(mediaServer).getParent().resolve("config.ini"),
-                 StandardOpenOption.CREATE,
-                 StandardOpenOption.TRUNCATE_EXISTING,
-                 StandardOpenOption.WRITE)) {
-            StreamUtils.copy(input, output);
-        } catch (Throwable e) {
-            throw e;
+                File copyToFile = copyTo.toFile();
+                if (copyToFile.isDirectory()) {
+                    continue;
+                }
+                log.debug("copy {} to {}", filename, copyTo);
+
+                try (OutputStream output = Files.newOutputStream(
+                    copyTo,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE)) {
+                    StreamUtils.copy(zip, output);
+                }
+                String _fileName = copyToFile.getName();
+                if (_fileName.equals("MediaServer") ||
+                    //windows
+                    _fileName.equals("MediaServer.exe")) {
+                    mediaServer = copyTo.toString();
+                }
+                // chmod +x MediaServer
+                chmodX(copyTo);
+            }
         }
 
         return mediaServer;
@@ -161,4 +230,5 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
         } catch (Throwable ignore) {
         }
     }
+
 }
