@@ -18,18 +18,19 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -70,6 +71,8 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
     @SneakyThrows
     private static String installTar(InputStream tar, String workdir) {
         String mediaServer = null;
+        List<Tuple2<Path,Path>> symbolicLink = new ArrayList<>();
+
         try (TarArchiveInputStream zip = new TarArchiveInputStream(tar)) {
             TarArchiveEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
@@ -88,7 +91,9 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
 
                 // 处理软链接
                 if (entry.isSymbolicLink()) {
-                    Files.createSymbolicLink(copyTo, Paths.get(entry.getLinkName()));
+                    symbolicLink.add(
+                        Tuples.of(copyTo,Paths.get(entry.getLinkName()))
+                    );
                     continue;
                 }
 
@@ -113,6 +118,16 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                 }
                 // chmod +x MediaServer
                 chmodX(copyTo);
+            }
+        }
+
+        for (Tuple2<Path, Path> objects : symbolicLink) {
+            Path link = objects.getT1();
+            Path target = objects.getT2();
+            try {
+                Files.createSymbolicLink(link, target);
+            }catch (FileAlreadyExistsException ignore){
+
             }
         }
         return mediaServer;
