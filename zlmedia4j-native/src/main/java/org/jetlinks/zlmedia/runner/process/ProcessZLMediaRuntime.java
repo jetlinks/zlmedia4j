@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * 基于 {@link ProcessBuilder} fork 运行zlmedia进程.
@@ -47,7 +49,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
 
     private final String processFile;
     private final String[] args;
-    private Process process;
+    private final AtomicReference<Process> process = new AtomicReference<>();
 
     private final Sinks.Many<String> output = Sinks
         .many()
@@ -111,6 +113,7 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                 .build(),
             configs,
             mapper);
+        new File(processFile + ".pid").deleteOnExit();
     }
 
     @Override
@@ -125,36 +128,44 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     }
 
 
-    protected long getPid() {
+    protected long getPid(Process process) {
         try {
             if (process.getClass().getName().equals("java.lang.UNIXProcess")) {
                 Field f = process.getClass().getDeclaredField("pid");
                 f.setAccessible(true);
                 return f.getLong(process);
             }
-            return -1;
+            return process.toHandle().pid();
         } catch (Throwable e) {
-            return -1;
+            return process.toHandle().pid();
+        }
+    }
+
+    private void tryKill(String pid) {
+        try {
+            log.warn("zlmedia process already exists, kill it:{}", pid);
+            Runtime
+                .getRuntime()
+                .exec(new String[]{"kill", pid})
+                .waitFor();
+        } catch (Throwable e) {
+            log.warn("kill zlmedia process error", e);
         }
     }
 
     @SneakyThrows
     protected synchronized void start0() {
         File file = new File(processFile);
-        if (isDisposed() || process != null) {
+        if (isDisposed() || process.get() != null) {
             return;
         }
         storeInit(this.configs, new File(new File(processFile).getParent(), "config.ini"));
+        disposable.update(Disposables.disposed());
 
         Path pidFile = Paths.get(processFile + ".pid");
         if (pidFile.toFile().exists()) {
             try {
-                String pid = new String(Files.readAllBytes(pidFile));
-                log.warn("zlmedia process already exists, kill it:{}", pid);
-                Runtime
-                    .getRuntime()
-                    .exec(new String[]{"kill", pid})
-                    .waitFor();
+                tryKill(new String(Files.readAllBytes(pidFile)));
             } catch (Throwable e) {
                 log.warn("kill zlmedia process error", e);
             }
@@ -165,36 +176,47 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
         if (ArrayUtils.isNotEmpty(this.args)) {
             cmd.addAll(Arrays.asList(this.args));
         }
-        process = new ProcessBuilder()
+        log.info("start zlmedia {}", cmd);
+        Process process = new ProcessBuilder()
             .command(cmd)
             .directory(file.getParentFile())
             .redirectErrorStream(true)
             .inheritIO()
             .start();
-        long pid = getPid();
+        this.process.set(process);
+
+        long pid = getPid(process);
 
         Disposable.Composite disp = Disposables.composite();
+
         if (pid > 0) {
             Files.write(pidFile,
                         String.valueOf(pid).getBytes(),
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE,
                         StandardOpenOption.CREATE);
-            pidFile
-                .toFile()
-                .deleteOnExit();
 
             disp.add(() -> {
                 boolean ignore = pidFile.toFile().delete();
             });
         }
+
+        disp.add(() -> {
+            try {
+                process.destroyForcibly();
+                log.info("stop process {}", cmd);
+            } catch (Throwable ignore) {
+                log.info("stop process {} failed", cmd);
+            }
+        });
+
         disp.add(
             Mono
                 .<DataBuffer>fromCallable(() -> {
                     try {
-                        processExit(process.waitFor());
+                        processExit(process.waitFor(), process);
                     } catch (InterruptedException ignore) {
-                        processExit(-1);
+                        processExit(-1, process);
                     }
                     return null;
                 })
@@ -215,25 +237,25 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
                 })
         );
 
+
         //监听进程退出
         disposable.update(disp);
 
-        if (isDisposed()) {
-            process.destroy();
-        }
     }
 
     private void handleOutput(String line) {
         output.tryEmitNext(line);
     }
 
-    protected void processExit(int code) {
+    protected void processExit(int code, Process process) {
         if (disposable.isDisposed()) {
             return;
         }
         //启动中...
         if (startAwait.currentSubscriberCount() > 0) {
+            dispose();
             startAwait.tryEmitError(new ZLMediaProcessException(code, "ZLMediaKit start failed,code:" + code));
+            return;
         } else {
             log.warn("ZLMediaKit exit with code:{}", code);
         }
@@ -241,17 +263,13 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
             log.error("ZLMediaKit exit with code:{},restart count > 10,stop restart", code);
             return;
         }
-        process = null;
-        restartCount++;
-        Schedulers
-            .boundedElastic()
-            .schedule(() -> {
-                if (disposable.isDisposed()) {
-                    return;
-                }
-                start0();
-            }, 2, TimeUnit.SECONDS);
-        //  disposable.dispose();
+        if (this.process.compareAndSet(process, null)) {
+            restartCount++;
+            Schedulers
+                .boundedElastic()
+                .schedule(this::start0, 2, TimeUnit.SECONDS);
+        }
+
     }
 
 
@@ -273,13 +291,5 @@ public class ProcessZLMediaRuntime implements ZLMediaRuntime {
     @Override
     public void dispose() {
         disposable.dispose();
-        if (null != process) {
-            process.destroy();
-            try {
-                process.waitFor();
-            } catch (InterruptedException ignore) {
-
-            }
-        }
     }
 }

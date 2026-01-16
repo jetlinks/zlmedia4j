@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import org.jetlinks.zlmedia.restful.ZLMediaConfigs;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
@@ -21,7 +22,7 @@ class EmbeddedProcessMediaRuntimeTest {
         configs.getPorts().setRtmp(11935);
         configs.getPorts().setRtc(8001);
         configs.getPorts().setSrt(19000);
-        configs.setCommandArgs(new String[]{"-l","4"});
+        configs.setCommandArgs(new String[]{"-l", "4"});
         runtime = new EmbeddedProcessMediaRuntime("target/zlmedia", configs);
         runtime.start()
                .as(StepVerifier::create)
@@ -33,6 +34,26 @@ class EmbeddedProcessMediaRuntimeTest {
     @AfterAll
     static void shutdown() {
         runtime.dispose();
+    }
+
+    @SneakyThrows
+    public static void main(String[] args) {
+        ZLMediaConfigs configs = new ZLMediaConfigs();
+        configs.getPorts().setSrt(9999);
+        configs.getPorts().setRtsp(12554);
+        configs.getPorts().setRtmp(12935);
+        configs.getPorts().setRtc(18001);
+        configs.getPorts().setHttp(8080);
+        configs.getPorts().setSrt(19200);
+        configs.setCommandArgs(new String[]{"-l", "0"});
+        EmbeddedProcessMediaRuntime runtime =
+            new EmbeddedProcessMediaRuntime("target/zlmedia", configs);
+
+
+        runtime.start0();
+        runtime.start0();
+
+        System.in.read();
     }
 
     @Test
