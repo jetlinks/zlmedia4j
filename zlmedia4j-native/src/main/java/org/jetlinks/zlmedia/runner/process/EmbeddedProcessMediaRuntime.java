@@ -21,10 +21,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFileAttributeView;
@@ -71,7 +68,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
     @SneakyThrows
     private static String installTar(InputStream tar, String workdir) {
         String mediaServer = null;
-        List<Tuple2<Path,Path>> symbolicLink = new ArrayList<>();
+        List<Tuple2<Path, Path>> symbolicLink = new ArrayList<>();
 
         try (TarArchiveInputStream zip = new TarArchiveInputStream(tar)) {
             TarArchiveEntry entry;
@@ -92,7 +89,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                 // 处理软链接
                 if (entry.isSymbolicLink()) {
                     symbolicLink.add(
-                        Tuples.of(copyTo,Paths.get(entry.getLinkName()))
+                        Tuples.of(copyTo, Paths.get(entry.getLinkName()))
                     );
                     continue;
                 }
@@ -109,6 +106,11 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.WRITE)) {
                     StreamUtils.copy(zip, output);
+                } catch (IOException e) {
+                    // copy的文件失败了,但是文件还存在,文件被占用拒绝了?
+                    if (!copyToFile.exists()) {
+                        throw e;
+                    }
                 }
                 String _fileName = copyToFile.getName();
                 if (_fileName.equals("MediaServer") ||
@@ -126,7 +128,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
             Path target = objects.getT2();
             try {
                 Files.createSymbolicLink(link, target);
-            }catch (FileAlreadyExistsException ignore){
+            } catch (FileAlreadyExistsException ignore) {
 
             }
         }
@@ -135,7 +137,7 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
 
     @SneakyThrows
     private static String install0(String basePath, String workdir) {
-        String[] supports = {".zip", ".tar.gz",".tar"};
+        String[] supports = {".zip", ".tar.gz", ".tar"};
         String suffix = null;
         InputStream stream = null;
         for (String _suffix : supports) {
@@ -215,6 +217,11 @@ public class EmbeddedProcessMediaRuntime extends ProcessZLMediaRuntime {
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.WRITE)) {
                     StreamUtils.copy(zip, output);
+                } catch (IOException e) {
+                    // copy的文件失败了,但是文件还存在,文件被占用拒绝了?
+                    if (!copyToFile.exists()) {
+                        throw e;
+                    }
                 }
                 String _fileName = copyToFile.getName();
                 if (_fileName.equals("MediaServer") ||
